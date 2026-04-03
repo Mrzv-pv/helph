@@ -7,222 +7,437 @@ datasource db {
   provider = "postgresql"
 }
 
-// ── Users ───────────────────────────────────────────────────────
-// Single user table, role determines specialist/client behavior
+// ── Enums ───────────────────────────────────────────────────────
 
 enum UserRole {
   CLIENT
-  SPECIALIST
+  PERFORMER
+  BOTH
+  ADMIN
 }
 
+enum AppLanguage {
+  sl
+  ru
+  en
+  de
+}
+
+enum OrderStatus {
+  NEW              // Оплачен, ожидает принятия специалистом
+  IN_PROGRESS      // Специалист взял в работу
+  AWAITING_REVIEW  // Работа загружена, ждёт подтверждения клиента
+  COMPLETED        // Клиент подтвердил — триггер выплаты
+  ON_HOLD          // Пауза по соглашению сторон
+  DISPUTED         // Открыт спор
+  CANCELLED        // Отменён — триггер возврата
+}
+
+enum PaymentStatus {
+  PENDING
+  CAPTURED
+  RELEASED
+  REFUNDED
+  FAILED
+}
+
+enum VerificationStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum DocumentType {
+  QUALIFICATION
+  LICENSE
+  DIPLOMA
+  ID_CARD
+}
+
+enum MessageType {
+  TEXT
+  FILE
+  SYSTEM
+}
+
+enum NotificationType {
+  NEW_ORDER
+  MESSAGE
+  STATUS_CHANGE
+  REVIEW
+  PAYMENT
+  SYSTEM
+}
+
+enum ServiceStatus {
+  active
+  paused
+  archived
+}
+
+// ── 1. Users ────────────────────────────────────────────────────
+
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  passwordHash  String
-  firstName     String
-  lastName      String
-  avatarUrl     String?
-  phone         String?
-  role          UserRole
-  locale        String    @default("sl") // preferred locale: sl, en, ru, de
-  emailVerified Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String       @id @default(cuid())
+  email           String       @unique
+  passwordHash    String?      // NULL при OAuth
+  firstName       String       @db.VarChar(50)
+  lastName        String       @db.VarChar(50)
+  avatarUrl       String?      @db.VarChar(500)
+  role            UserRole     @default(CLIENT)
+  language        AppLanguage  @default(sl)
+  isEmailVerified Boolean      @default(false)
+  isActive        Boolean      @default(true)
+  lastSeenAt      DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
-  // Specialist profile (null for clients)
-  specialistProfile SpecialistProfile?
+  clientProfile      ClientProfile?
+  performerProfile   PerformerProfile?
+  ordersAsClient     Order[]        @relation("ClientOrders")
+  ordersAsPerformer  Order[]        @relation("PerformerOrders")
+  reviewsAsAuthor    Review[]       @relation("ReviewAuthor")
+  reviewsAsPerformer Review[]       @relation("ReviewPerformer")
+  favorites          Favorite[]
+  messagesSent       Message[]      @relation("MessageSender")
+  notifications      Notification[]
+  statusChanges      OrderStatusHistory[] @relation("StatusChangedBy")
 
-  // Client relations
-  ordersAsClient    Order[]   @relation("ClientOrders")
-  reviewsAsAuthor   Review[]  @relation("ReviewAuthor")
-  favorites         Favorite[]
-  messagesAsSender  Message[] @relation("MessageSender")
-
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
   @@map("users")
 }
 
-// ── Specialist Profile ──────────────────────────────────────────
+// ── 2. Client Profile ───────────────────────────────────────────
 
-model SpecialistProfile {
-  id             String   @id @default(cuid())
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model ClientProfile {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  totalSpent            Decimal  @default(0) @db.Decimal(12, 2)
+  totalOrders           Int      @default(0)
+  totalReviewsWritten   Int      @default(0)
+  savedPerformersCount  Int      @default(0)
+
+  createdAt             DateTime @default(now())
+
+  @@map("client_profiles")
+}
+
+// ── 3. Performer Profile ────────────────────────────────────────
+
+model PerformerProfile {
+  id                    String             @id @default(cuid())
+  userId                String             @unique
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bio                   String?            @db.VarChar(200)
+  specialization        String?            @db.VarChar(60)
 
   // Localized content (JSON: { sl: "...", en: "...", ru: "...", de: "..." })
-  title          Json     // job title per locale
-  bio            Json     // bio per locale
-  skills         Json     // skills per locale (string arrays)
+  titleLocalized        Json?              // job title per locale
+  bioLocalized          Json?              // bio per locale
+  skillsLocalized       Json?              // skills per locale (string arrays)
 
-  category       String   // e.g., "cat.law", "cat.finance"
-  priceFrom      Int      // minimum price in EUR cents
-  verified       Boolean  @default(false)
-  online         Boolean  @default(false)
-  responseTime   Int      @default(24) // average response time in hours
+  category              String?            // e.g., "cat.law", "cat.finance"
+  priceFrom             Int                @default(0) // minimum price in EUR cents
 
-  // Computed / cached stats
-  rating         Float    @default(0)
-  reviewsCount   Int      @default(0)
-  ordersCount    Int      @default(0)
+  isVerified            Boolean            @default(false)
+  verificationStatus    VerificationStatus @default(NONE)
+  avgRating             Decimal            @default(0) @db.Decimal(3, 2)
+  totalReviews          Int                @default(0)
+  totalOrdersCompleted  Int                @default(0)
+  responseTimeHours     Decimal?           @db.Decimal(4, 1)
+  isAvailable           Boolean            @default(true)
+  profileViews30d       Int                @default(0)
+  monthlyRevenue        Decimal            @default(0) @db.Decimal(12, 2)
+  stripeAccountId       String?            @db.VarChar(100)
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
 
-  services       Service[]
-  ordersAsSpec   Order[]    @relation("SpecialistOrders")
-  reviewsAsSpec  Review[]   @relation("ReviewSpecialist")
+  services              Service[]
+  skills                PerformerSkill[]
+  verifications         Verification[]
+  favoritedBy           Favorite[]
 
-  @@map("specialist_profiles")
+  @@index([isVerified])
+  @@index([isAvailable])
+  @@map("performer_profiles")
 }
 
-// ── Services (packages published by specialist) ─────────────────
+// ── 4. Categories ───────────────────────────────────────────────
 
-enum PriceType {
-  FIXED
-  HOURLY
+model Category {
+  id              String   @id @default(cuid())
+  slug            String   @unique @db.VarChar(50)
+  nameSl          String   @db.VarChar(100)
+  nameRu          String   @db.VarChar(100)
+  nameEn          String   @db.VarChar(100)
+  nameDe          String   @db.VarChar(100)
+  icon            String?  @db.VarChar(50)
+  sortOrder       Int      @default(0)
+  isActive        Boolean  @default(true)
+  performersCount Int      @default(0)
+
+  services        Service[]
+
+  @@map("categories")
 }
+
+// ── 5. Performer Skills ─────────────────────────────────────────
+
+model PerformerSkill {
+  id           String           @id @default(cuid())
+  performerId  String
+  performer    PerformerProfile @relation(fields: [performerId], references: [id], onDelete: Cascade)
+  skillName    String           @db.VarChar(30)
+  sortOrder    Int              @default(0) @db.SmallInt
+
+  @@unique([performerId, skillName])
+  @@index([performerId])
+  @@map("performer_skills")
+}
+
+// ── 6. Services ─────────────────────────────────────────────────
 
 model Service {
-  id             String   @id @default(cuid())
-  specialistId   String
-  specialist     SpecialistProfile @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+  id            String           @id @default(cuid())
+  performerId   String
+  performer     PerformerProfile @relation(fields: [performerId], references: [id], onDelete: Cascade)
+  categoryId    String
+  category      Category         @relation(fields: [categoryId], references: [id])
 
-  // Localized content
-  title          Json     // { sl: "...", en: "...", ... }
-  description    Json     // { sl: "...", en: "...", ... }
+  title         String           @db.VarChar(80)
+  titleLocalized Json?           // { sl: "...", en: "...", ... }
+  description   String?          @db.Text
+  descLocalized Json?            // { sl: "...", en: "...", ... }
 
-  price          Int      // price in EUR cents (e.g. 12000 = 120.00 EUR)
-  priceType      PriceType @default(FIXED)
-  deliveryDays   Int      // estimated delivery in days
-  active         Boolean  @default(true)
+  price         Decimal          @db.Decimal(10, 2)
+  deliveryDays  Int              @db.SmallInt
+  status        ServiceStatus    @default(active)
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  ordersCount   Int              @default(0)
+  avgRating     Decimal          @default(0) @db.Decimal(3, 2)
 
-  orders         Order[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
+  orders        Order[]
+
+  @@index([performerId])
+  @@index([categoryId])
+  @@index([status])
   @@map("services")
 }
 
-// ── Orders ──────────────────────────────────────────────────────
-// Status machine per TZ v2.0:
-// NEW → IN_PROGRESS → AWAITING_REVIEW → COMPLETED
-//                  ↘ ON_HOLD / DISPUTED / CANCELLED
-
-enum OrderStatus {
-  NEW              // Novo — just placed
-  IN_PROGRESS      // V delu — specialist working
-  AWAITING_REVIEW  // Čaka na odziv — delivered, waiting for client
-  COMPLETED        // Zaključeno — client confirmed
-  ON_HOLD          // Na čakanju — paused
-  DISPUTED         // Spor — escalated
-  CANCELLED        // Preklicano — cancelled
-}
+// ── 7. Orders ───────────────────────────────────────────────────
 
 model Order {
-  id             String      @id @default(cuid())
-  orderNumber    String      @unique // human-readable: ORD-001, ORD-002...
+  id                  String      @id @default(cuid())
+  orderNumber         String      @unique @db.VarChar(20) // #ORD-000001
 
-  clientId       String
-  client         User        @relation("ClientOrders", fields: [clientId], references: [id])
+  clientId            String
+  client              User        @relation("ClientOrders", fields: [clientId], references: [id])
+  performerId         String
+  performer           User        @relation("PerformerOrders", fields: [performerId], references: [id])
+  serviceId           String
+  service             Service     @relation(fields: [serviceId], references: [id])
 
-  specialistId   String
-  specialist     SpecialistProfile @relation("SpecialistOrders", fields: [specialistId], references: [id])
+  status              OrderStatus @default(NEW)
 
-  serviceId      String
-  service        Service     @relation(fields: [serviceId], references: [id])
+  // Snapshot of service at order time
+  serviceTitle        String      @db.VarChar(80)
+  servicePrice        Decimal     @db.Decimal(10, 2)
 
-  // Order details
-  description    String?     // client's task description
-  amount         Int         // total price in EUR cents
-  status         OrderStatus @default(NEW)
+  // Financial breakdown
+  platformFeePct      Decimal     @db.Decimal(4, 2)   // e.g. 10.00
+  platformFeeAmount   Decimal     @db.Decimal(10, 2)
+  totalAmount         Decimal     @db.Decimal(10, 2)
 
-  // Privacy: specialist sees full client name only after confirmation
-  clientConfirmed Boolean    @default(false)
+  // Content
+  clientComment       String?     @db.Text
+  cancellationReason  String?     @db.VarChar(500)
 
-  // Escrow
-  escrowHeld     Boolean     @default(true)  // funds held in escrow
-  escrowReleased Boolean     @default(false) // funds released to specialist
+  // Timestamps
+  startedAt           DateTime?
+  completedAt         DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
-  // Dates
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  completedAt    DateTime?
-  cancelledAt    DateTime?
+  payment             Payment?
+  review              Review?
+  messages            Message[]
+  statusHistory       OrderStatusHistory[]
+  notifications       Notification[]
 
-  messages       Message[]
-  review         Review?
-
-  @@index([clientId])
-  @@index([specialistId])
+  @@index([clientId, status])
+  @@index([performerId, status])
   @@index([status])
+  @@index([orderNumber])
+  @@index([serviceId])
   @@map("orders")
 }
 
-// ── Reviews ─────────────────────────────────────────────────────
+// ── 8. Order Status History ─────────────────────────────────────
 
-model Review {
-  id             String   @id @default(cuid())
-
-  orderId        String   @unique
-  order          Order    @relation(fields: [orderId], references: [id])
-
-  authorId       String
-  author         User     @relation("ReviewAuthor", fields: [authorId], references: [id])
-
-  specialistId   String
-  specialist     SpecialistProfile @relation("ReviewSpecialist", fields: [specialistId], references: [id])
-
-  rating         Int      // 1-5
-  comment        String
-
-  createdAt      DateTime @default(now())
-
-  @@index([specialistId])
-  @@map("reviews")
-}
-
-// ── Messages ────────────────────────────────────────────────────
-
-model Message {
-  id         String   @id @default(cuid())
-
-  orderId    String
-  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  senderId   String
-  sender     User     @relation("MessageSender", fields: [senderId], references: [id])
-
-  text       String
-  read       Boolean  @default(false)
-
-  createdAt  DateTime @default(now())
+model OrderStatusHistory {
+  id          String       @id @default(cuid())
+  orderId     String
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus  OrderStatus?
+  toStatus    OrderStatus
+  changedById String
+  changedBy   User         @relation("StatusChangedBy", fields: [changedById], references: [id])
+  note        String?      @db.VarChar(500)
+  createdAt   DateTime     @default(now())
 
   @@index([orderId])
+  @@map("order_status_history")
+}
+
+// ── 9. Payments ─────────────────────────────────────────────────
+
+model Payment {
+  id                      String        @id @default(cuid())
+  orderId                 String        @unique
+  order                   Order         @relation(fields: [orderId], references: [id])
+
+  amount                  Decimal       @db.Decimal(10, 2)
+  platformFee             Decimal       @db.Decimal(10, 2)
+  totalCharged            Decimal       @db.Decimal(10, 2)
+  currency                String        @default("EUR") @db.Char(3)
+  paymentMethod           String        @db.VarChar(20) // card, bank_transfer, wallet
+  paymentStatus           PaymentStatus @default(PENDING)
+
+  stripePaymentIntentId   String?       @unique @db.VarChar(100)
+  stripeTransferId        String?       @db.VarChar(100)
+
+  capturedAt              DateTime?
+  releasedAt              DateTime?
+  refundedAt              DateTime?
+  refundAmount            Decimal?      @db.Decimal(10, 2)
+
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+
+  @@index([paymentStatus])
+  @@map("payments")
+}
+
+// ── 10. Messages ────────────────────────────────────────────────
+
+model Message {
+  id          String      @id @default(cuid())
+  orderId     String
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  senderId    String
+  sender      User        @relation("MessageSender", fields: [senderId], references: [id])
+
+  messageType MessageType @default(TEXT)
+  content     String?     @db.Text
+  isRead      Boolean     @default(false)
+  isFlagged   Boolean     @default(false)
+
+  createdAt   DateTime    @default(now())
+
+  attachments MessageAttachment[]
+
+  @@index([orderId, createdAt(sort: Desc)])
+  @@index([senderId])
   @@map("messages")
 }
 
-// ── Favorites ───────────────────────────────────────────────────
+// ── 11. Message Attachments ─────────────────────────────────────
 
-model Favorite {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  specialistId   String   // references SpecialistProfile.id
+model MessageAttachment {
+  id         String   @id @default(cuid())
+  messageId  String
+  message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  fileUrl    String   @db.VarChar(500)
+  fileName   String   @db.VarChar(255)
+  fileSize   Int      // bytes
+  fileType   String   @db.VarChar(100) // MIME type
+  createdAt  DateTime @default(now())
 
-  createdAt      DateTime @default(now())
-
-  @@unique([userId, specialistId])
-  @@map("favorites")
+  @@index([messageId])
+  @@map("message_attachments")
 }
 
-// ── Categories ──────────────────────────────────────────────────
+// ── 12. Notifications ───────────────────────────────────────────
 
-model Category {
-  id    String @id @default(cuid())
-  slug  String @unique // "law", "finance", "design"...
-  key   String @unique // "cat.law", "cat.finance"... (i18n key)
-  icon  String         // lucide icon name
-  sort  Int   @default(0)
+model Notification {
+  id             String           @id @default(cuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           NotificationType
+  title          String           @db.VarChar(200)
+  body           String?          @db.Text
+  isRead         Boolean          @default(false)
+  relatedOrderId String?
+  relatedOrder   Order?           @relation(fields: [relatedOrderId], references: [id], onDelete: SetNull)
+  createdAt      DateTime         @default(now())
 
-  @@map("categories")
+  @@index([userId, isRead])
+  @@index([relatedOrderId])
+  @@map("notifications")
+}
+
+// ── 13. Reviews ─────────────────────────────────────────────────
+
+model Review {
+  id           String   @id @default(cuid())
+  orderId      String   @unique
+  order        Order    @relation(fields: [orderId], references: [id])
+  reviewerId   String
+  reviewer     User     @relation("ReviewAuthor", fields: [reviewerId], references: [id])
+  performerId  String
+  performer    User     @relation("ReviewPerformer", fields: [performerId], references: [id])
+
+  rating       Int      @db.SmallInt // 1-5
+  text         String?  @db.Text
+  isPublished  Boolean  @default(true)
+
+  createdAt    DateTime @default(now())
+
+  @@index([performerId, isPublished])
+  @@map("reviews")
+}
+
+// ── 14. Verifications ───────────────────────────────────────────
+
+model Verification {
+  id              String           @id @default(cuid())
+  performerId     String
+  performer       PerformerProfile @relation(fields: [performerId], references: [id], onDelete: Cascade)
+  documentType    DocumentType
+  documentUrl     String           @db.VarChar(500)
+  status          String           @default("PENDING") @db.VarChar(20) // PENDING, APPROVED, REJECTED
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  rejectionReason String?          @db.VarChar(500)
+  submittedAt     DateTime         @default(now())
+
+  @@index([performerId])
+  @@map("verifications")
+}
+
+// ── 15. Favorites ───────────────────────────────────────────────
+
+model Favorite {
+  id           String           @id @default(cuid())
+  clientId     String
+  client       User             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  performerId  String
+  performer    PerformerProfile @relation(fields: [performerId], references: [id], onDelete: Cascade)
+  createdAt    DateTime         @default(now())
+
+  @@unique([clientId, performerId])
+  @@index([clientId])
+  @@index([performerId])
+  @@map("favorites")
 }

@@ -4,9 +4,9 @@ import { prisma } from "@/lib/db";
 
 interface CreateOrderInput {
   serviceId: string;
-  specialistId: string;
+  performerId: string; // PerformerProfile.userId (the User id)
   description: string;
-  amount: number; // in EUR cents
+  amount: number; // in EUR cents (servicePrice)
 }
 
 export async function createOrder(input: CreateOrderInput) {
@@ -20,27 +20,72 @@ export async function createOrder(input: CreateOrderInput) {
     return { success: false, error: "No test client found" };
   }
 
-  // Generate order number
+  // Get service details for snapshot
+  const service = await prisma.service.findUnique({
+    where: { id: input.serviceId },
+  });
+
+  if (!service) {
+    return { success: false, error: "Service not found" };
+  }
+
+  // Generate order number: #ORD-000001
   const lastOrder = await prisma.order.findFirst({
     orderBy: { createdAt: "desc" },
   });
 
   const lastNum = lastOrder?.orderNumber
-    ? parseInt(lastOrder.orderNumber.replace("ORD-", ""), 10)
+    ? parseInt(lastOrder.orderNumber.replace("#ORD-", "").replace("ORD-", ""), 10)
     : 0;
-  const orderNumber = `ORD-${String(lastNum + 1).padStart(3, "0")}`;
+  const orderNumber = `#ORD-${String(lastNum + 1).padStart(6, "0")}`;
+
+  // Financial breakdown
+  const servicePrice = Number(service.price);
+  const platformFeePct = 10.0; // 10%
+  const platformFeeAmount = Math.round(servicePrice * platformFeePct) / 100;
+  const totalAmount = servicePrice + platformFeeAmount;
 
   const order = await prisma.order.create({
     data: {
       orderNumber,
       clientId: testClient.id,
-      specialistId: input.specialistId,
+      performerId: input.performerId,
       serviceId: input.serviceId,
-      description: input.description || null,
-      amount: input.amount,
       status: "NEW",
-      escrowHeld: true,
-      escrowReleased: false,
+
+      // Snapshot
+      serviceTitle: service.title,
+      servicePrice: servicePrice,
+
+      // Financial
+      platformFeePct,
+      platformFeeAmount,
+      totalAmount,
+
+      // Content
+      clientComment: input.description || null,
+
+      // Status history
+      statusHistory: {
+        create: {
+          fromStatus: null,
+          toStatus: "NEW",
+          changedById: testClient.id,
+          note: "Order created",
+        },
+      },
+
+      // Payment record
+      payment: {
+        create: {
+          amount: servicePrice,
+          platformFee: platformFeeAmount,
+          totalCharged: totalAmount,
+          currency: "EUR",
+          paymentMethod: "card",
+          paymentStatus: "PENDING",
+        },
+      },
     },
   });
 
@@ -51,7 +96,7 @@ export async function getServiceForOrder(serviceId: string) {
   const service = await prisma.service.findUnique({
     where: { id: serviceId },
     include: {
-      specialist: {
+      performer: {
         include: {
           user: {
             select: { firstName: true, lastName: true },
@@ -65,15 +110,15 @@ export async function getServiceForOrder(serviceId: string) {
 
   return {
     id: service.id,
-    title: service.title as Record<string, string>,
-    description: service.description as Record<string, string>,
-    price: service.price,
-    priceType: service.priceType,
+    title: (service.titleLocalized ?? { sl: service.title }) as Record<string, string>,
+    description: (service.descLocalized ?? { sl: service.description ?? "" }) as Record<string, string>,
+    price: Number(service.price) * 100, // convert to cents for frontend
+    priceType: "FIXED" as const,
     deliveryDays: service.deliveryDays,
-    specialistId: service.specialistId,
-    specialistName: `${service.specialist.user.firstName} ${service.specialist.user.lastName}`,
-    specialistTitle: service.specialist.title as Record<string, string>,
-    specialistRating: service.specialist.rating,
-    specialistVerified: service.specialist.verified,
+    performerUserId: service.performer.userId,
+    specialistName: `${service.performer.user.firstName} ${service.performer.user.lastName}`,
+    specialistTitle: (service.performer.titleLocalized ?? {}) as Record<string, string>,
+    specialistRating: Number(service.performer.avgRating),
+    specialistVerified: service.performer.isVerified,
   };
 }

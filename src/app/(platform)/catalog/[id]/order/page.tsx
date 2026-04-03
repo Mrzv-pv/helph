@@ -21,7 +21,7 @@ interface ServiceData {
   price: number;
   priceType: string;
   deliveryDays: number;
-  specialistId: string;
+  performerUserId: string;
   specialistName: string;
   specialistTitle: Record<string, string>;
   specialistRating: number;
@@ -68,7 +68,7 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
     startTransition(async () => {
       const result = await createOrder({
         serviceId: service.id,
-        specialistId: service.specialistId,
+        performerId: service.performerUserId,
         description,
         amount: total,
       });
