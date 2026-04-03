@@ -17,9 +17,13 @@ export function Header() {
         <div className="flex items-center justify-between h-[72px]">
           <Link href="/" className="flex items-center gap-3">
             <div className="w-[40px] h-[40px] rounded-lg bg-[var(--color-gold)] flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0D2818" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
+              <svg width="20" height="20" viewBox="0 0 100 100" fill="none">
+                {/* Letter H */}
+                <rect x="15" y="10" width="14" height="80" rx="3" fill="#0D2818"/>
+                <rect x="71" y="10" width="14" height="80" rx="3" fill="#0D2818"/>
+                <rect x="29" y="40" width="42" height="14" rx="3" fill="#0D2818"/>
+                {/* Hammer head on top of right leg */}
+                <rect x="60" y="4" width="36" height="12" rx="2" fill="#0D2818"/>
               </svg>
             </div>
             <span className="text-xl font-semibold tracking-[-0.5px]" style={{ fontFamily: "var(--font-plus-jakarta), 'Plus Jakarta Sans', sans-serif" }}>
