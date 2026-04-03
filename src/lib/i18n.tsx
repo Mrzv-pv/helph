@@ -273,6 +273,28 @@ const translations = {
   "dash.analytics": { sl: "Analitika", en: "Analytics", ru: "Аналитика", de: "Analytik" },
   "dash.totalEarned": { sl: "Skupni zaslužek", en: "Total earned", ru: "Всего заработано", de: "Gesamtverdienst" },
   "dash.repeatClients": { sl: "Ponovne stranke", en: "Repeat clients", ru: "Повторные клиенты", de: "Stammkunden" },
+
+  // ── Order Flow ────────────────────────────────────────────────
+  "order.title": { sl: "Naročilo storitve", en: "Order Service", ru: "Оформление заказа", de: "Service bestellen" },
+  "order.service": { sl: "Storitev", en: "Service", ru: "Услуга", de: "Dienstleistung" },
+  "order.specialist": { sl: "Strokovnjak", en: "Specialist", ru: "Специалист", de: "Spezialist" },
+  "order.price": { sl: "Cena", en: "Price", ru: "Цена", de: "Preis" },
+  "order.delivery": { sl: "Rok izvedbe", en: "Delivery time", ru: "Срок выполнения", de: "Lieferzeit" },
+  "order.days": { sl: "dni", en: "days", ru: "дней", de: "Tage" },
+  "order.description": { sl: "Opis naloge", en: "Task description", ru: "Описание задачи", de: "Aufgabenbeschreibung" },
+  "order.descriptionHint": { sl: "Opišite, kaj potrebujete. Več podrobnosti = boljši rezultat.", en: "Describe what you need. More details = better result.", ru: "Опишите, что вам нужно. Больше деталей = лучший результат.", de: "Beschreiben Sie, was Sie brauchen. Mehr Details = besseres Ergebnis." },
+  "order.summary": { sl: "Povzetek naročila", en: "Order summary", ru: "Итого", de: "Bestellübersicht" },
+  "order.subtotal": { sl: "Storitev", en: "Service", ru: "Услуга", de: "Dienstleistung" },
+  "order.escrowFee": { sl: "Provizija platforme", en: "Platform fee", ru: "Комиссия платформы", de: "Plattformgebühr" },
+  "order.total": { sl: "Skupaj", en: "Total", ru: "Итого к оплате", de: "Gesamt" },
+  "order.escrowInfo": { sl: "Sredstva bodo varno shranjena na escrow računu do zaključka naročila.", en: "Funds will be securely held in escrow until the order is completed.", ru: "Средства будут безопасно храниться на escrow-счёте до завершения заказа.", de: "Gelder werden sicher auf einem Treuhandkonto gehalten, bis der Auftrag abgeschlossen ist." },
+  "order.confirm": { sl: "Potrdi in plačaj", en: "Confirm & Pay", ru: "Подтвердить и оплатить", de: "Bestätigen & Bezahlen" },
+  "order.back": { sl: "Nazaj k strokovnjaku", en: "Back to specialist", ru: "Назад к специалисту", de: "Zurück zum Spezialisten" },
+  "order.success": { sl: "Naročilo uspešno oddano!", en: "Order placed successfully!", ru: "Заказ успешно оформлен!", de: "Bestellung erfolgreich aufgegeben!" },
+  "order.successDesc": { sl: "Vaše naročilo je bilo oddano. Strokovnjak bo kmalu začel z delom.", en: "Your order has been placed. The specialist will start working soon.", ru: "Ваш заказ оформлен. Специалист скоро приступит к работе.", de: "Ihre Bestellung wurde aufgegeben. Der Spezialist wird bald mit der Arbeit beginnen." },
+  "order.goToOrders": { sl: "Pojdi na moja naročila", en: "Go to my orders", ru: "Перейти к моим заказам", de: "Zu meinen Bestellungen" },
+  "order.fixed": { sl: "Fiksna cena", en: "Fixed price", ru: "Фиксированная цена", de: "Festpreis" },
+  "order.hourly": { sl: "Na uro", en: "Per hour", ru: "В час", de: "Pro Stunde" },
 } as const;
 
 type TranslationKey = keyof typeof translations;

@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Users ───────────────────────────────────────────────────────
+// Single user table, role determines specialist/client behavior
+
+enum UserRole {
+  CLIENT
+  SPECIALIST
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  avatarUrl     String?
+  phone         String?
+  role          UserRole
+  locale        String    @default("sl") // preferred locale: sl, en, ru, de
+  emailVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Specialist profile (null for clients)
+  specialistProfile SpecialistProfile?
+
+  // Client relations
+  ordersAsClient    Order[]   @relation("ClientOrders")
+  reviewsAsAuthor   Review[]  @relation("ReviewAuthor")
+  favorites         Favorite[]
+  messagesAsSender  Message[] @relation("MessageSender")
+
+  @@map("users")
+}
+
+// ── Specialist Profile ──────────────────────────────────────────
+
+model SpecialistProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Localized content (JSON: { sl: "...", en: "...", ru: "...", de: "..." })
+  title          Json     // job title per locale
+  bio            Json     // bio per locale
+  skills         Json     // skills per locale (string arrays)
+
+  category       String   // e.g., "cat.law", "cat.finance"
+  priceFrom      Int      // minimum price in EUR cents
+  verified       Boolean  @default(false)
+  online         Boolean  @default(false)
+  responseTime   Int      @default(24) // average response time in hours
+
+  // Computed / cached stats
+  rating         Float    @default(0)
+  reviewsCount   Int      @default(0)
+  ordersCount    Int      @default(0)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  services       Service[]
+  ordersAsSpec   Order[]    @relation("SpecialistOrders")
+  reviewsAsSpec  Review[]   @relation("ReviewSpecialist")
+
+  @@map("specialist_profiles")
+}
+
+// ── Services (packages published by specialist) ─────────────────
+
+enum PriceType {
+  FIXED
+  HOURLY
+}
+
+model Service {
+  id             String   @id @default(cuid())
+  specialistId   String
+  specialist     SpecialistProfile @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+
+  // Localized content
+  title          Json     // { sl: "...", en: "...", ... }
+  description    Json     // { sl: "...", en: "...", ... }
+
+  price          Int      // price in EUR cents (e.g. 12000 = 120.00 EUR)
+  priceType      PriceType @default(FIXED)
+  deliveryDays   Int      // estimated delivery in days
+  active         Boolean  @default(true)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  orders         Order[]
+
+  @@map("services")
+}
+
+// ── Orders ──────────────────────────────────────────────────────
+// Status machine per TZ v2.0:
+// NEW → IN_PROGRESS → AWAITING_REVIEW → COMPLETED
+//                  ↘ ON_HOLD / DISPUTED / CANCELLED
+
+enum OrderStatus {
+  NEW              // Novo — just placed
+  IN_PROGRESS      // V delu — specialist working
+  AWAITING_REVIEW  // Čaka na odziv — delivered, waiting for client
+  COMPLETED        // Zaključeno — client confirmed
+  ON_HOLD          // Na čakanju — paused
+  DISPUTED         // Spor — escalated
+  CANCELLED        // Preklicano — cancelled
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  orderNumber    String      @unique // human-readable: ORD-001, ORD-002...
+
+  clientId       String
+  client         User        @relation("ClientOrders", fields: [clientId], references: [id])
+
+  specialistId   String
+  specialist     SpecialistProfile @relation("SpecialistOrders", fields: [specialistId], references: [id])
+
+  serviceId      String
+  service        Service     @relation(fields: [serviceId], references: [id])
+
+  // Order details
+  description    String?     // client's task description
+  amount         Int         // total price in EUR cents
+  status         OrderStatus @default(NEW)
+
+  // Privacy: specialist sees full client name only after confirmation
+  clientConfirmed Boolean    @default(false)
+
+  // Escrow
+  escrowHeld     Boolean     @default(true)  // funds held in escrow
+  escrowReleased Boolean     @default(false) // funds released to specialist
+
+  // Dates
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  completedAt    DateTime?
+  cancelledAt    DateTime?
+
+  messages       Message[]
+  review         Review?
+
+  @@index([clientId])
+  @@index([specialistId])
+  @@index([status])
+  @@map("orders")
+}
+
+// ── Reviews ─────────────────────────────────────────────────────
+
+model Review {
+  id             String   @id @default(cuid())
+
+  orderId        String   @unique
+  order          Order    @relation(fields: [orderId], references: [id])
+
+  authorId       String
+  author         User     @relation("ReviewAuthor", fields: [authorId], references: [id])
+
+  specialistId   String
+  specialist     SpecialistProfile @relation("ReviewSpecialist", fields: [specialistId], references: [id])
+
+  rating         Int      // 1-5
+  comment        String
+
+  createdAt      DateTime @default(now())
+
+  @@index([specialistId])
+  @@map("reviews")
+}
+
+// ── Messages ────────────────────────────────────────────────────
+
+model Message {
+  id         String   @id @default(cuid())
+
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  senderId   String
+  sender     User     @relation("MessageSender", fields: [senderId], references: [id])
+
+  text       String
+  read       Boolean  @default(false)
+
+  createdAt  DateTime @default(now())
+
+  @@index([orderId])
+  @@map("messages")
+}
+
+// ── Favorites ───────────────────────────────────────────────────
+
+model Favorite {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialistId   String   // references SpecialistProfile.id
+
+  createdAt      DateTime @default(now())
+
+  @@unique([userId, specialistId])
+  @@map("favorites")
+}
+
+// ── Categories ──────────────────────────────────────────────────
+
+model Category {
+  id    String @id @default(cuid())
+  slug  String @unique // "law", "finance", "design"...
+  key   String @unique // "cat.law", "cat.finance"... (i18n key)
+  icon  String         // lucide icon name
+  sort  Int   @default(0)
+
+  @@map("categories")
+}

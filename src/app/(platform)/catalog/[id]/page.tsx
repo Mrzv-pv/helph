@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useState } from "react";
-import { getSpecialists, getServices, getReviews } from "@/lib/mock-data";
+import { use, useState, useEffect } from "react";
+import { getSpecialists, getReviews } from "@/lib/mock-data";
+import { getSpecialistByOldId } from "@/lib/actions/specialists";
 import { useI18n } from "@/lib/i18n";
 import { shortName } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
@@ -10,23 +11,48 @@ import { Rating } from "@/components/ui/rating";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
-  Clock, MapPin, MessageCircle, Calendar, ArrowLeft, CheckCircle, Briefcase, Shield,
+  Clock, MessageCircle, Calendar, Briefcase, Shield, Loader2,
 } from "lucide-react";
 import Link from "next/link";
+
+interface DbService {
+  id: string;
+  title: Record<string, string>;
+  description: Record<string, string>;
+  price: number;
+  priceType: string;
+  deliveryDays: number;
+}
 
 export default function SpecialistProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { t, locale } = useI18n();
 
   const specialists = getSpecialists(locale);
-  const services = getServices(locale);
   const reviews = getReviews(locale);
-
   const specialist = specialists.find((s) => s.id === id) || specialists[0];
+
   const [activeTab, setActiveTab] = useState<"services" | "reviews">("services");
+  const [dbServices, setDbServices] = useState<DbService[]>([]);
+  const [loadingServices, setLoadingServices] = useState(true);
 
   const currency = locale === "ru" ? "\u20BD" : "\u20AC";
   const dateLocale = locale === "ru" ? "ru-RU" : locale === "de" ? "de-DE" : locale === "sl" ? "sl-SI" : "en-US";
+
+  // Fetch services from DB (they have real IDs for ordering)
+  useEffect(() => {
+    getSpecialistByOldId(id).then((data) => {
+      if (data?.services) setDbServices(data.services);
+      setLoadingServices(false);
+    });
+  }, [id]);
+
+  function formatPrice(cents: number) {
+    return (cents / 100).toLocaleString(dateLocale, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+  }
 
   return (
     <div className="max-w-[1280px] mx-auto px-6 lg:px-12 py-8">
@@ -81,7 +107,7 @@ export default function SpecialistProfilePage({ params }: { params: Promise<{ id
                 activeTab === "services" ? "bg-[var(--color-green-dark)] text-[#F5F0E8]" : "text-[var(--color-text-muted)]"
               }`}
             >
-              {t("specialist.services")} ({services.length})
+              {t("specialist.services")} ({dbServices.length})
             </button>
             <button
               onClick={() => setActiveTab("reviews")}
@@ -96,33 +122,41 @@ export default function SpecialistProfilePage({ params }: { params: Promise<{ id
           {/* Services tab */}
           {activeTab === "services" && (
             <div className="grid md:grid-cols-2 gap-4">
-              {services.map((service) => (
-                <Card key={service.id} hoverable className="flex flex-col">
-                  <h3 className="text-[15px] font-medium mb-2">{service.title}</h3>
-                  <p className="text-sm text-[var(--color-text-muted)] leading-relaxed mb-4 flex-1">
-                    {service.description}
-                  </p>
-                  <div className="flex items-center justify-between pt-3 border-t border-[var(--color-border)]">
-                    <div>
-                      <span className="text-lg font-semibold text-[var(--color-text)]">
-                        {service.price.toLocaleString(dateLocale)} {currency}
-                      </span>
-                      {service.priceType === "hourly" && (
-                        <span className="text-xs text-[var(--color-text-muted)]"> / {t("specialist.perHour")}</span>
-                      )}
+              {loadingServices ? (
+                <div className="col-span-2 flex justify-center py-12">
+                  <Loader2 size={24} className="animate-spin text-[var(--color-text-muted)]" />
+                </div>
+              ) : (
+                dbServices.map((service) => (
+                  <Card key={service.id} hoverable className="flex flex-col">
+                    <h3 className="text-[15px] font-medium mb-2">
+                      {service.title[locale] || service.title.sl}
+                    </h3>
+                    <p className="text-sm text-[var(--color-text-muted)] leading-relaxed mb-4 flex-1">
+                      {service.description[locale] || service.description.sl}
+                    </p>
+                    <div className="flex items-center justify-between pt-3 border-t border-[var(--color-border)]">
+                      <div>
+                        <span className="text-lg font-semibold text-[var(--color-text)]">
+                          {formatPrice(service.price)} {currency}
+                        </span>
+                        {service.priceType === "HOURLY" && (
+                          <span className="text-xs text-[var(--color-text-muted)]"> / {t("specialist.perHour")}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
+                        <Calendar size={14} />
+                        {service.deliveryDays} {t("specialist.days")}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
-                      <Calendar size={14} />
-                      {service.deliveryDays} {t("specialist.days")}
-                    </div>
-                  </div>
-                  <Link href="#">
-                    <Button variant="primary" size="sm" className="w-full mt-3">
-                      {t("specialist.order")}
-                    </Button>
-                  </Link>
-                </Card>
-              ))}
+                    <Link href={`/catalog/${id}/order?service=${service.id}`}>
+                      <Button variant="primary" size="sm" className="w-full mt-3">
+                        {t("specialist.order")}
+                      </Button>
+                    </Link>
+                  </Card>
+                ))
+              )}
             </div>
           )}
 
