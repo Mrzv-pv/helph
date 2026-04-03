@@ -6,12 +6,8 @@ import { Avatar } from "@/components/ui/avatar";
 import { Rating } from "@/components/ui/rating";
 import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/lib/i18n";
+import { shortName, formatAmount } from "@/lib/utils";
 import { Heart, MessageCircle } from "lucide-react";
-
-function formatAmount(value: number, locale: string) {
-  const currency = locale === "ru" ? "₽" : "€";
-  return `${value.toLocaleString("ru-RU")} ${currency}`;
-}
 
 const favorites = [
   { name: "Ana Novak", title: "Odvetnica za korporativno pravo", rating: 4.9, reviews: 47, price: 120, verified: true },
@@ -44,7 +40,7 @@ export default function ClientFavoritesPage() {
               <Avatar name={spec.name} size={48} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-semibold truncate">{spec.name}</span>
+                  <span className="text-sm font-semibold truncate">{shortName(spec.name)}</span>
                   {spec.verified && <Badge variant="verified">Verified</Badge>}
                 </div>
                 <p className="text-xs text-[var(--color-text-muted)] truncate">{spec.title}</p>

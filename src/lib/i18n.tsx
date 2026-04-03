@@ -231,6 +231,15 @@ const translations = {
   "dash.statusNew": { sl: "Novo", en: "New", ru: "Новый", de: "Neu" },
   "dash.statusInProgress": { sl: "V delu", en: "In progress", ru: "В работе", de: "In Bearbeitung" },
   "dash.statusCompleted": { sl: "Zaključeno", en: "Completed", ru: "Завершён", de: "Abgeschlossen" },
+  "dash.statusAwaiting": { sl: "Čaka na odziv", en: "Awaiting review", ru: "Ожидает проверки", de: "Wartet auf Prüfung" },
+  "dash.statusOnHold": { sl: "Čaka", en: "On hold", ru: "На паузе", de: "Pausiert" },
+  "dash.statusDisputed": { sl: "Spor", en: "Disputed", ru: "Спор", de: "Streitfall" },
+  "dash.statusCancelled": { sl: "Preklicano", en: "Cancelled", ru: "Отменён", de: "Storniert" },
+  "dash.allStatuses": { sl: "Vsi", en: "All", ru: "Все", de: "Alle" },
+  "dash.escrowNotice": { sl: "Varno poslovanje prek escrow računa. Sredstva se izvajalcu nakažejo šele po vaši potrditvi.", en: "Secure transactions via escrow. Funds are released to the specialist only after your confirmation.", ru: "Безопасные сделки через escrow. Средства переводятся специалисту только после вашего подтверждения.", de: "Sichere Transaktionen über Escrow. Gelder werden erst nach Ihrer Bestätigung an den Spezialisten freigegeben." },
+  "dash.available": { sl: "Na voljo", en: "Available", ru: "На связи", de: "Verfügbar" },
+  "dash.unavailable": { sl: "Ni na voljo", en: "Unavailable", ru: "Не на связи", de: "Nicht verfügbar" },
+  "specialist.deliveryDays": { sl: "dni", en: "days", ru: "дней", de: "Tage" },
 
   // ── Client Dashboard ──────────────────────────────────────────
   "client.overview": { sl: "Pregled", en: "Overview", ru: "Обзор", de: "Übersicht" },

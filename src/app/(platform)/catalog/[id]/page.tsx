@@ -3,6 +3,7 @@
 import { use, useState } from "react";
 import { getSpecialists, getServices, getReviews } from "@/lib/mock-data";
 import { useI18n } from "@/lib/i18n";
+import { shortName } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Rating } from "@/components/ui/rating";
@@ -115,9 +116,11 @@ export default function SpecialistProfilePage({ params }: { params: Promise<{ id
                       {service.deliveryDays} {t("specialist.days")}
                     </div>
                   </div>
-                  <Button variant="primary" size="sm" className="w-full mt-3">
-                    {t("specialist.order")}
-                  </Button>
+                  <Link href="#">
+                    <Button variant="primary" size="sm" className="w-full mt-3">
+                      {t("specialist.order")}
+                    </Button>
+                  </Link>
                 </Card>
               ))}
             </div>
@@ -133,7 +136,7 @@ export default function SpecialistProfilePage({ params }: { params: Promise<{ id
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className="text-sm font-medium">{review.reviewerName}</span>
+                          <span className="text-sm font-medium">{shortName(review.reviewerName)}</span>
                           <span className="text-xs text-[var(--color-text-muted)] ml-2">
                             {new Date(review.date).toLocaleDateString(dateLocale, { day: "numeric", month: "long", year: "numeric" })}
                           </span>

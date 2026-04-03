@@ -5,14 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/lib/i18n";
+import { shortName, formatAmount } from "@/lib/utils";
 import {
   ShoppingBag, TrendingUp, Star, Eye, ArrowRight, Plus, UserPen,
 } from "lucide-react";
 
 const orders = [
-  { id: "1", title: "Регистрация ООО", client: "Олег Тарасов", amount: 15000, statusKey: "dash.statusInProgress" as const, statusColor: "bg-[var(--color-gold-tint)] text-[#8A6A10]" },
-  { id: "2", title: "Составление договора аренды", client: "Светлана Морозова", amount: 5000, statusKey: "dash.statusNew" as const, statusColor: "bg-[var(--color-success-bg)] text-[var(--color-success)]" },
-  { id: "3", title: "Юридическая консультация", client: "Андрей Белов", amount: 3000, statusKey: "dash.statusCompleted" as const, statusColor: "bg-[var(--color-champagne)] text-[var(--color-text-muted)]" },
+  { id: "ORD-001", title: "Registracija d.o.o.", client: "Олег Тарасов", confirmed: true, amount: 350, statusKey: "dash.statusInProgress" as const, statusColor: "bg-[var(--color-gold-tint)] text-[#8A6A10]" },
+  { id: "ORD-002", title: "Sestavitev pogodbe", client: "Светлана Морозова", confirmed: true, amount: 120, statusKey: "dash.statusNew" as const, statusColor: "bg-[var(--color-success-bg)] text-[var(--color-success)]" },
+  { id: "ORD-003", title: "Pravno svetovanje", client: "Андрей Белов", confirmed: false, amount: 80, statusKey: "dash.statusCompleted" as const, statusColor: "bg-[var(--color-champagne)] text-[var(--color-text-muted)]" },
 ];
 
 const messages = [
@@ -20,12 +21,6 @@ const messages = [
   { name: "Светлана Морозова", text: "Спасибо за быстрый ответ!", time: "12:05", unread: false },
   { name: "Андрей Белов", text: "Оставил отзыв, посмотрите", time: "вчера", unread: false },
 ];
-
-function formatAmount(value: number, locale: string) {
-  const currency = locale === "ru" ? "₽" : "€";
-  const formatted = value.toLocaleString("ru-RU");
-  return `${formatted} ${currency}`;
-}
 
 export default function DashboardOverviewPage() {
   const { t, locale } = useI18n();
@@ -90,7 +85,7 @@ export default function DashboardOverviewPage() {
               <div key={order.id} className="flex items-center gap-4 px-[18px] py-4">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{order.title}</div>
-                  <div className="text-xs text-[var(--color-text-muted)]">{order.client}</div>
+                  <div className="text-xs text-[var(--color-text-muted)]">{order.confirmed ? order.client : shortName(order.client)}</div>
                 </div>
                 <div className="text-sm font-medium whitespace-nowrap">{formatAmount(order.amount, locale)}</div>
                 <span className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${order.statusColor}`}>

@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { SpecialistCard } from "@/components/features/specialist-card";
 import { useI18n } from "@/lib/i18n";
+import { shortName } from "@/lib/utils";
 import { getSpecialists, categories, getTestimonials } from "@/lib/mock-data";
 import {
   Search, ArrowRight, CheckCircle, MessageSquare, Shield,
@@ -214,7 +215,7 @@ export default function HomePage() {
                 </div>
                 <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed mb-4">&ldquo;{item.text}&rdquo;</p>
                 <div>
-                  <div className="text-sm font-medium">{item.name}</div>
+                  <div className="text-sm font-medium">{shortName(item.name)}</div>
                   <div className="text-xs text-[var(--color-text-muted)]">{item.role}</div>
                 </div>
               </div>

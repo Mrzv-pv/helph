@@ -6,6 +6,7 @@ import { Rating } from "@/components/ui/rating";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
+import { shortName } from "@/lib/utils";
 import Link from "next/link";
 
 interface SpecialistCardProps {
@@ -35,7 +36,7 @@ export function SpecialistCard({
           <Avatar src={avatar} name={name} size={56} online={online} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-[15px] font-medium text-[var(--color-text)] truncate">{name}</h3>
+              <h3 className="text-[15px] font-medium text-[var(--color-text)] truncate">{shortName(name)}</h3>
               {verified && <Badge variant="verified">{t("specialist.verified")}</Badge>}
             </div>
             <p className="text-sm text-[var(--color-text-muted)] mt-0.5">{title}</p>

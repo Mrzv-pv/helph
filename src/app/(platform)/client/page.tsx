@@ -6,16 +6,11 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Rating } from "@/components/ui/rating";
 import { useI18n } from "@/lib/i18n";
+import { shortName, formatAmount } from "@/lib/utils";
 import {
   ShoppingBag, Wallet, Heart, Star, ArrowRight, Search, Clock,
 } from "lucide-react";
 import Link from "next/link";
-
-function formatAmount(value: number, locale: string) {
-  const currency = locale === "ru" ? "₽" : "€";
-  const formatted = value.toLocaleString("ru-RU");
-  return `${formatted} ${currency}`;
-}
 
 const orders = [
   { id: "1", specialist: "Ana Novak", service: "Registracija d.o.o.", amount: 120, statusKey: "client.statusInProgress" as const, statusColor: "bg-[var(--color-gold-tint)] text-[#8A6A10]", date: "28.03.2026" },
@@ -125,7 +120,7 @@ export default function ClientOverviewPage() {
               <div key={i} className="flex items-center gap-3 px-[18px] py-4">
                 <Avatar name={spec.name} size={40} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium">{spec.name}</div>
+                  <div className="text-sm font-medium">{shortName(spec.name)}</div>
                   <div className="text-xs text-[var(--color-text-muted)]">{spec.title}</div>
                   <div className="flex items-center gap-1 mt-0.5">
                     <Rating value={spec.rating} size={12} />
