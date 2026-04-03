@@ -231,6 +231,39 @@ const translations = {
   "dash.statusNew": { sl: "Novo", en: "New", ru: "Новый", de: "Neu" },
   "dash.statusInProgress": { sl: "V delu", en: "In progress", ru: "В работе", de: "In Bearbeitung" },
   "dash.statusCompleted": { sl: "Zaključeno", en: "Completed", ru: "Завершён", de: "Abgeschlossen" },
+
+  // ── Client Dashboard ──────────────────────────────────────────
+  "client.overview": { sl: "Pregled", en: "Overview", ru: "Обзор", de: "Übersicht" },
+  "client.myOrders": { sl: "Moja naročila", en: "My orders", ru: "Мои заказы", de: "Meine Aufträge" },
+  "client.messages": { sl: "Sporočila", en: "Messages", ru: "Сообщения", de: "Nachrichten" },
+  "client.favorites": { sl: "Priljubljeni", en: "Favorites", ru: "Избранное", de: "Favoriten" },
+  "client.profile": { sl: "Profil", en: "Profile", ru: "Профиль", de: "Profil" },
+  "client.settings": { sl: "Nastavitve", en: "Settings", ru: "Настройки", de: "Einstellungen" },
+  "client.hello": { sl: "Živjo", en: "Hello", ru: "Привет", de: "Hallo" },
+  "client.activeOrders": { sl: "Aktivna naročila", en: "Active orders", ru: "Активные заказы", de: "Aktive Aufträge" },
+  "client.totalSpent": { sl: "Skupna poraba", en: "Total spent", ru: "Всего потрачено", de: "Gesamtausgaben" },
+  "client.savedSpecs": { sl: "Shranjeni strokovnjaki", en: "Saved specialists", ru: "Сохранённые специалисты", de: "Gespeicherte Spezialisten" },
+  "client.reviewsLeft": { sl: "Napisani odzivi", en: "Reviews left", ru: "Оставлено отзывов", de: "Abgegebene Bewertungen" },
+  "client.recentOrders": { sl: "Zadnja naročila", en: "Recent orders", ru: "Последние заказы", de: "Letzte Aufträge" },
+  "client.allOrders": { sl: "Vsa naročila", en: "All orders", ru: "Все заказы", de: "Alle Aufträge" },
+  "client.findSpecialist": { sl: "Poišči strokovnjaka", en: "Find specialist", ru: "Найти специалиста", de: "Spezialisten finden" },
+  "client.newOrder": { sl: "Novo naročilo", en: "New order", ru: "Новый заказ", de: "Neuer Auftrag" },
+  "client.recommended": { sl: "Priporočeni strokovnjaki", en: "Recommended specialists", ru: "Рекомендуемые специалисты", de: "Empfohlene Spezialisten" },
+  "client.viewAll": { sl: "Poglej vse", en: "View all", ru: "Смотреть все", de: "Alle anzeigen" },
+  "client.statusPending": { sl: "Čaka", en: "Pending", ru: "Ожидание", de: "Ausstehend" },
+  "client.statusInProgress": { sl: "V delu", en: "In progress", ru: "В работе", de: "In Bearbeitung" },
+  "client.statusCompleted": { sl: "Zaključeno", en: "Completed", ru: "Завершён", de: "Abgeschlossen" },
+  "client.statusReview": { sl: "Čaka na odziv", en: "Awaiting review", ru: "Ожидает отзыв", de: "Wartet auf Bewertung" },
+
+  // ── Specialist Dashboard extras ───────────────────────────────
+  "dash.completedOrders": { sl: "Zaključena naročila", en: "Completed orders", ru: "Выполненные заказы", de: "Abgeschlossene Aufträge" },
+  "dash.responseTime": { sl: "Čas odziva", en: "Response time", ru: "Время ответа", de: "Antwortzeit" },
+  "dash.myServices": { sl: "Moje storitve", en: "My services", ru: "Мои услуги", de: "Meine Dienstleistungen" },
+  "dash.editService": { sl: "Uredi", en: "Edit", ru: "Редактировать", de: "Bearbeiten" },
+  "dash.calendar": { sl: "Koledar", en: "Calendar", ru: "Календарь", de: "Kalender" },
+  "dash.analytics": { sl: "Analitika", en: "Analytics", ru: "Аналитика", de: "Analytik" },
+  "dash.totalEarned": { sl: "Skupni zaslužek", en: "Total earned", ru: "Всего заработано", de: "Gesamtverdienst" },
+  "dash.repeatClients": { sl: "Ponovne stranke", en: "Repeat clients", ru: "Повторные клиенты", de: "Stammkunden" },
 } as const;
 
 type TranslationKey = keyof typeof translations;
